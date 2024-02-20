@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description"
+    content="Visualize o mapa de casos de dengue por bairro em São Paulo até 10/02/2024. Informações atualizadas sobre a incidência de dengue na cidade.">
+
+  <title>Mapa da Dengue em São Paulo - SP</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/yegor256/tacit@gh-pages/tacit-css.min.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+
+  <style>
+    .custom-tooltip {
+      max-width: 200px;
+    }
+
+    h1.header {
+      margin-top: 0px;
+    }
+
+    .legend {
+      line-height: 18px;
+      color: #555;
+    }
+
+    .legend i {
+      width: 18px;
+      height: 18px;
+      float: left;
+      margin-right: 8px;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1 class="header">Dengue em São Paulo - SP</h1>
+    <p style="margin-bottom: 1rem;">Visualize no mapa os <strong id="description-label-display">casos de dengue</strong>
+      em São
+      Paulo
+      por bairro no ano de 2024
+      até o dia 10/02/2024. <span id="description-label">Para visualizar os dados do coeficiente de incidência (INC*) no
+        mapa</span>, <a href="?label=inc">clique aqui</a>.</p>
+  </header>
+  <main>
+    <section id="map" style="width: 100%; height: 80vh;"></section>
+  </main>
+  <footer>
+    <div style="line-height: 1.2rem;">
+      <small>
+        O boletim de arboviroses foi publicado em 19/02/2024 e acessado dia 20/02/2024. Os boletins encontram-se
+        no <a
+          href="https://www.prefeitura.sp.gov.br/cidade/secretarias/saude/vigilancia_em_saude/doencas_e_agravos/index.php?p=267596">site
+          da prefeitura.</a>
+      </small>
+    </div>
+    <div style="line-height: 1.2rem;">
+      <small>* INC é o coeficiente de incidência por 100.000 habitantes.</small>
+    </div>
+  </footer>
+
+  <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+  <script src="https://d3js.org/topojson.v3.min.js"></script>
+  <script>
+    const decileColors = ["#FFEDA0", "#FED976", "#FEB24C", "#FD8D3C", "#FC4E2A", "#E31A1C", "#BD0026", "#800026", "#580000", "#400000"];
+
+    async function fetchData(url) {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return await response.json();
+      } catch (error) {
+        console.error("Fetch error: ", error);
+      }
+    }
+
+    async function initMap() {
+      var map = L.map('map').setView([-23.6505, -46.6333], 11);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(map);
+
+      const topojsonData = await fetchData('/data/sp_distritos.topojson');
+      const dengueDataRaw = await fetchData('/data/sao_paulo_dengue.json?5');
+      const dengueData = JSON.parse(dengueDataRaw); // Ensure dengueData is already in JSON format before parsing
+
+      const params = new URLSearchParams(window.location.search);
+
+      label = 'number_of_cases'
+      labelTooltip = 'Número de casos'
+      if (params.get('label') == 'inc') {
+        label = 'incidence_coefficient'
+        labelTooltip = 'Coeficiente de Incidência'
+
+        const link = document.querySelector('p a[href="?label=inc"]');
+        link.href = "/";
+
+        const label_description = document.querySelector('#description-label-display');
+        label_description.textContent = "números do coeficiente de incidência de dengue"
+
+        const label_display = document.querySelector('#description-label');
+        label_display.textContent = "Para visualizar os casos de Dengue no mapa"
+
+      }
+
+      dengueData.sort((a, b) => a[label] - b[label]);
+
+      // Assign ranks based on sorted position
+      dengueData.forEach((item, index) => {
+        item.rank = index + 1; // Assigning rank starting from 1
+      });
+
+      const geojsonData = topojson.feature(topojsonData, topojsonData.objects.sp_distritos);
+
+      L.geoJson(geojsonData, {
+        style: feature => {
+          // Assuming 'number_of_cases' can be directly used as 'intensity'
+          // Determine the intensity for the current feature
+          const dengueFeature = findItemByName(dengueData, feature.properties.nome);
+          const intensity = dengueFeature ? dengueFeature[label] : 0;
+
+          const fillColor = getFillColorByRank(dengueFeature.rank, dengueData.length);
+
+          return {
+            fillColor: fillColor,
+            weight: 2,
+            opacity: 1,
+            color: 'white',
+            fillOpacity: 0.7
+          };
+        },
+        onEachFeature: (feature, layer) => {
+          // Retrieve the matching dengue data for the current feature
+          const result = findItemByName(dengueData, feature.properties.nome);
+          if (result) {
+            // Bind a tooltip to the layer using the dengue case data
+            layer.bindTooltip(`<strong>${feature.properties.nome}</strong><br>${labelTooltip}: ${result[label]}`, {
+              className: 'custom-tooltip'
+            });
+          }
+        }
+      }).addTo(map);
+
+    }
+
+
+    function findItemByName(items, itemName) {
+      return items.find(item => item.name === itemName);
+    }
+
+    function getDecileByRank(rank, totalItems) {
+      return Math.ceil(rank / (totalItems / 10));
+    }
+
+    // Function to determine fillColor based on rank decile
+    function getFillColorByRank(rank, totalItems) {
+      const decile = getDecileByRank(rank, totalItems);
+      return decileColors[decile - 1]; // Array is zero-indexed, deciles start from 1
+    }
+
+    // Initialize the map
+    initMap().catch(error => console.error("Initialization error: ", error));
+  </script>
+</body>
+
+</html>
