@@ -86,8 +86,8 @@
         attribution: '© OpenStreetMap contributors'
       }).addTo(map);
 
-      const topojsonData = await fetchData('/data/sp_distritos.topojson');
-      const dengueDataRaw = await fetchData('/data/sao_paulo_dengue.json?5');
+      const topojsonData = await fetchData('data/sp_distritos.topojson');
+      const dengueDataRaw = await fetchData('data/sao_paulo_dengue.json?5');
       const dengueData = JSON.parse(dengueDataRaw); // Ensure dengueData is already in JSON format before parsing
 
       const params = new URLSearchParams(window.location.search);
