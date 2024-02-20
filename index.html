@@ -99,7 +99,7 @@
         labelTooltip = 'Coeficiente de Incidência'
 
         const link = document.querySelector('p a[href="?label=inc"]');
-        link.href = "/";
+        link.href = "/mapa-da-dengue/";
 
         const label_description = document.querySelector('#description-label-display');
         label_description.textContent = "números do coeficiente de incidência de dengue"
@@ -166,6 +166,15 @@
 
     // Initialize the map
     initMap().catch(error => console.error("Initialization error: ", error));
+  </script>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-G3MW5016FR"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+
+    gtag('config', 'G-G3MW5016FR');
   </script>
 </body>
 
