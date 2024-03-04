@@ -55,7 +55,8 @@
     </div>
     <div style="line-height: 1.2rem;">
       <small>
-        O boletim de arboviroses foi publicado em 26/02/2024 e acessado dia 28/02/2024. Os boletins encontram-se
+        O boletim de arboviroses foi publicado em 04/03/2024 e acessado dia 04/03/2024 e contemplam dados até
+        24/02/2024. Os boletins encontram-se
         no <a
           href="https://www.prefeitura.sp.gov.br/cidade/secretarias/saude/vigilancia_em_saude/doencas_e_agravos/index.php?p=267596">site
           da prefeitura.</a>
@@ -91,7 +92,7 @@
       }).addTo(map);
 
       const topojsonData = await fetchData('data/sp_distritos.topojson');
-      const dengueDataRaw = await fetchData('data/sao_paulo_dengue.json?6');
+      const dengueDataRaw = await fetchData('data/sao_paulo_dengue.json?7');
       const dengueData = JSON.parse(dengueDataRaw); // Ensure dengueData is already in JSON format before parsing
 
       const params = new URLSearchParams(window.location.search);
